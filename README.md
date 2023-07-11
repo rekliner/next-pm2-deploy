@@ -2,7 +2,7 @@
 
 A template for deploying next sites with zero downtime to a linux server running pm2.  
 
-This is not a Nextjs app in itself, just a set of files to be added to your existing app.
+This is not a Nextjs app in itself, just a set of files to be added to your existing Nextjs app.
 
 # Features
 
@@ -18,21 +18,23 @@ This is not a Nextjs app in itself, just a set of files to be added to your exis
 # Setup
 
 - Install [PM2](https://github.com/Unitech/pm2) on the server.  Command for Ubuntu/Debian is `sudo apt install pm2`
-- Install reverse proxy like NGINX if you don't want traffic directly to your app. [There are a million tutorials.](https://gist.github.com/kocisov/2a9567eb51b83dfef48efce02ef3ab06)  It should point to the `current` directory in your project folder.  This is a symbolic link created at first deployment.  
-- Only the .env file needs to be edited.  Necessary variables are in the `.env.example` in this repo.
-- Multiple .env files supported. One or more can be present. The override heirachy is .env.local -> .env.staging -> .env.production -> .env
 - Create a directory on the webserver for your project.  
 - Add a subdirectory `releases` and if persistant storage is desired `storage`
-- Add the files in this template to your existing Next app repo (except this reamde of course!)
-- Upload your .env file to the server in the main project directory (No, it should not be in your repo!)
-- Clone your next app into the `releases` directory.
-- Run the deploy script from the newly cloned folder.  `. deploy.sh` or `bash deploy.sh`
-- Don't forget to save your PM2 setup in case of server reboot: `pm2 startup && pm2 save`
+- Install reverse proxy like NGINX if you don't want traffic directly to your app. [There are a million tutorials.](https://gist.github.com/kocisov/2a9567eb51b83dfef48efce02ef3ab06)  The webroot should point to the `current` symbolic link in your project folder.  (It is created at first deployment)  
+- Only the .env file needs to be edited.  Necessary variables are in the `.env.example` in this repo.
+- Multiple .env files supported. One or more can be present. The override heirachy is .env.local -> .env.staging -> .env.production -> .env
+- Upload your .env file to the server in the main project directory
+- Add the files in this template to your existing Next app repo (except this reamde, the license, and .env.example)
+- Clone your next app into the `releases` directory: ex.`git clone git@github.com:rekliner/next-pm2-deploy.git`
+- Enter the newly cloned directory and make the deploy script executable: `sudo chmod -x deploy.sh`
+- Run the deploy script in the newly cloned folder:  `. deploy.sh` or `bash deploy.sh`
+- Save your PM2 setup to be persistant over server reboots: `pm2 startup && pm2 save`
 
-# What will happen
+# What will happen when deployed
 
 - A log file will be started in the current directory `last_deploy.log`
 - A new directory will be created with the current timestamp in the `releases` directory
+- Environment files and persistant storage will be linked from the main project folder
 - NPM requirements will be installed
 - A production build will be created using `npx next build`
 - The `current` symbolic link will be recreated to point to this new build.
