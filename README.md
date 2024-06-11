@@ -43,7 +43,6 @@ This is not a Nextjs app in itself, just a set of files to be added to your exis
 # To deploy
 
 - A visit to `yoursite.com/api/deploy` will trigger deployment.  By default more than one visit a minute is ignored.
-- In Github or Gitlab a `Webhook` can be set up for a branch under the repo `Settings`.  
-This way a deployment will be triggered by gitlab requesting `yoursite.com/api/deploy` whenever code is checked in to that branch.  
-Also, a deployment key or secret can be added to help secure your endpoint. (look for tutorials on the header this adds to the request)
+- In [Github (link to docs)](https://docs.github.com/en/webhooks/using-webhooks/creating-webhooks) or [Gitlab (link to docs)](https://docs.gitlab.com/ee/user/project/integrations/webhooks.html) a `Webhook` can be set up for a branch under the repo `Settings`.  Deployment will be triggered by an automatic request to `yoursite.com/api/deploy` whenever code is checked in to that branch.  
+- A deployment key or secret can be added to help secure your endpoint. (look for tutorials on the header this adds to the request)
 - Running the deploy.sh script manually from one of the release directories will also work if you don't want to use the API/webhook method.
