@@ -1,7 +1,7 @@
 # rekliner/next-pm2-deploy
 
-A template for deploying next sites with zero downtime to a linux server running pm2.  
-
+A template for deploying next sites with zero downtime to a linux server running pm2.  It was written to allow Next.js apps to be conveniently run on AWS EC2 servers but would work with any host.  
+  
 This is not a Nextjs app in itself, just a set of files to be added to your existing Nextjs app.
 
 # Features
@@ -10,8 +10,8 @@ This is not a Nextjs app in itself, just a set of files to be added to your exis
 - Zero downtime: It only enables the new commit once the installation and build is successful.  Then a symbolic link is "instantly" swapped to use the newest code.
 - Responds to `yoursite.com/api/deploy` endpoint
 - Rate limited to prevent endpoint abuse - using [code from Vercel](https://github.com/vercel/next.js/tree/canary/examples/api-routes-rate-limit)
-- Checks for existing deployment and prevents running 2 concurrent deployments
-- Optional deploy key header for basic security
+- Checks for existing deployment operation to prevent running 2 concurrent deployments
+- Optional deploy key header for basic security from gitlab or github
 - Cancels deployment if it's the same commit as is currently live
 - Cleans up older or failed deployment files to keep disk space consistant
 
@@ -46,4 +46,4 @@ This is not a Nextjs app in itself, just a set of files to be added to your exis
 - In Github or Gitlab a `Webhook` can be set up for a branch under the repo `Settings`.  
 This way a deployment will be triggered by gitlab requesting `yoursite.com/api/deploy` whenever code is checked in to that branch.  
 Also, a deployment key or secret can be added to help secure your endpoint. (look for tutorials on the header this adds to the request)
-- Running the deploy.sh script manually from one of the release directories works just fine.
+- Running the deploy.sh script manually from one of the release directories will also work if you don't want to use the API/webhook method.

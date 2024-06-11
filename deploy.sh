@@ -1,5 +1,5 @@
 #!/bin/bash
-RUN_DIR=$(pwd -LP)
+RUN_DIR=$(pwd -LP | sed -z 's/\n/ /g')
 #the presence of a .env file overrides the production file, which overrides staging, which overrides local
 source ../../.env.local
 source ../../.env.staging
@@ -25,7 +25,7 @@ echo "Port: $PORT"
 echo "Storage Directory: $STORAGE_DIR"
 echo "Run Dir: $RUN_DIR"
 
-cd $APP_DIR/current
+cd $RUN_DIR
 LAST=$(git rev-parse HEAD)
 echo "$LAST is last commit" 
 
@@ -39,19 +39,32 @@ cd $APP_DIR/releases/$DATE
 echo "Cloning $REPO into $APP_DIR/releases/$DATE"
 git clone -b $BRANCH $REPO .
 
-#check if it is indeed a new commit
-NEW=$(git rev-parse HEAD)
-echo "$NEW is new commit" 
-if [ $LAST = $NEW ]; then
-  echo "Commit is same hash, aborting!!"
-  cp -f $RUN_DIR/latest_deploy.log $APP_DIR/latest_deploy.log
-  cd $APP_DIR
-  rm -Rf $APP_DIR/releases/$DATE
-  #if its an ssh terminal return to prompt, otherwise exit the thread
-  if [[ -t 0 || -p /dev/stdin ]]; then
-    return
-  else
-    exit 1
+has_param() {
+    local term="$1"
+    shift
+    for arg; do
+        if [[ $arg == "$term" ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+#check if it is indeed a new commit or the -f (force) flag is present
+if ! has_param '-f' "$@"; then
+  NEW=$(git rev-parse HEAD)
+  echo "$NEW is new commit" 
+  if [ "$LAST" == "$NEW" ]; then
+    echo "Commit is same hash, aborting!!"
+    cp -f $RUN_DIR/latest_deploy.log $APP_DIR/latest_deploy.log
+    cd $APP_DIR
+    rm -Rf $APP_DIR/releases/$DATE
+    #if its an ssh terminal return to prompt, otherwise exit the thread
+    if [[ -t 0 || -p /dev/stdin ]]; then
+      return
+    else
+      exit 1
+    fi
   fi
 fi
 
@@ -72,11 +85,11 @@ fi
 echo "installing npm packages"
 npm install
 echo "building $APP_DIR/releases/$DATE $DOTENV"
-if dotenv -e .env$DOTENV -- npx next build; then 
+if dotenv npx next build; then 
   echo "build successful"
 else
   echo "build failed! deleting release and aborting" #important to free the space in case failed deployments pile up
-  cp -f $RUN_DIR/latest_deploy.log $APP_DIR/latest_deploy.log
+  cp -f $RUN_DIR/last_deploy.log $APP_DIR/last_deploy.log
   cd $APP_DIR
   rm -Rf $APP_DIR/releases/$DATE
   if [[ -t 0 || -p /dev/stdin ]]; then
@@ -91,32 +104,36 @@ echo "linking $APP_DIR/releases/$DATE to $APP_DIR/current"
 rm $APP_DIR/current
 ln -s $APP_DIR/releases/$DATE $APP_DIR/current
 
-#restart the node server to serve latest build
-echo "restarting node server for $APP_NAME at $APP_DIR/releases/$DATE"
-echo "cd $APP_DIR/releases/$DATE"
-      cd $APP_DIR/releases/$DATE
-echo "pm2 delete $APP_NAME"
-      pm2 delete $APP_NAME
-echo "lsof -i tcp:${PORT} | awk 'NR!=1 {print $2}' | xargs kill"
-      lsof -i tcp:${PORT} | awk 'NR!=1 {print $2}' | xargs kill
-echo 'pm2 start npx --time --name="$APP_NAME" --no-treekill --node-args="--max-old-space-size=3096" -- next start -- --port=$PORT'
-      pm2 start npx --time --name="$APP_NAME" --no-treekill --node-args="--max-old-space-size=3096" -- next start -- --port=$PORT
-
-
 
 #delete anything older than the last 4 releases
 OLD=$(ls -tl $APP_DIR/releases | grep '^d' | awk '{print $(NF)}' | tail -n+5 | sed "s|^|$APP_DIR/releases/|")
-OLD_ONELINE="$OLD | sed -z 's/\n/ /g'"
-echo "removing: $OLD"
-if [ ! $OLD_ONELINE = "$APP_DIR/releases/" ]; then
-  rm -Rf $OLD
-fi
-
+for i in $OLD; do
+  if [ ! $i = "$APP_DIR/releases/" ]; then #yes, it happened
+    echo "removing $i"
+    rm -Rf $i
+  fi
+done
 
 echo "updating this script copy in appdir with the latest from the repo"
 chmod u+x $APP_DIR/releases/$DATE/deploy.sh
 cp -f $APP_DIR/releases/$DATE/deploy.sh $APP_DIR/deploy.sh
 chmod u+x $APP_DIR/deploy.sh
+
+
+#restart the node server to serve latest build
+echo "restarting node server for $APP_NAME at $APP_DIR/releases/$DATE"
+echo "cd $APP_DIR/releases/$DATE"
+      cd $APP_DIR/releases/$DATE
+echo "pm2 delete $APP_NAME"  #how to do this without killing this script also? 2 part script? --no-treekill is causing reboot issues
+      pm2 delete $APP_NAME
+echo "lsof -i tcp:${PORT} | awk 'NR!=1 {print $2}' | xargs kill"
+      lsof -i tcp:${PORT} | awk 'NR!=1 {print $2}' | xargs kill
+echo 'pm2 save'
+      pm2 save
+echo 'pm2 start npx --time --name="${APP_NAME}" --no-treekill --node-args="--max-old-space-size=3096" -- next start --port=${PORT}'
+      pm2 start npx --time --name="$APP_NAME" --no-treekill --node-args="--max-old-space-size=3096" -- next start --port=$PORT
+echo 'pm2 save'
+      pm2 save
 
 #cd ~
 echo "deployed!"

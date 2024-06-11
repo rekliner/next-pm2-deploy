@@ -3,6 +3,7 @@ import { closeSync, openSync } from "fs"
 import rateLimit from "lib/ratelimit"
 import type { NextApiRequest, NextApiResponse } from "next"
 
+const webhookPlatform = "gitlab" //change to "github" if that's your host
 //set DEPLOY_SCRIPT and DEPLOY_TOKEN in .env
 //DEPLOY_TOKEN is optional and corresponds to gitlab's X-Gitlab-Token header
 
@@ -20,7 +21,7 @@ export default async function handler(
     await limiter.check(res, 2, "CACHE_TOKEN") // 1 request within interval (not sure why the option is n-1)
     if (
       !process.env.DEPLOY_TOKEN ||
-      process.env.DEPLOY_TOKEN == _req.headers["x-gitlab-token"] //"x-hub-signature-256" for github
+      process.env.DEPLOY_TOKEN == (webhookPlatform == "gitlab" ? _req.headers["x-gitlab-token"] : _req.headers["x-hub-signature-256"])
     ) {
       if (!child) {
         console.log("Starting deployment")
